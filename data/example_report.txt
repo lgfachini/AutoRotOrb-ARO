@@ -1,0 +1,27 @@
+AutoRotOrb (ARO) active-space analysis
+================================================================================
+
+Electron-space summary
+--------------------------------------------------------------------------------
+Total electrons: 1133
+Last inactive orbital index: 560
+Active-space index range: 561 - 567
+
+Candidate orbitals
+--------------------------------------------------------------------------------
+MO   565 | atom    0 Er  f   | contribution = 97.3
+MO   566 | atom    0 Er  f   | contribution = 95.9
+MO   567 | atom    0 Er  f   | contribution = 94.5
+MO   563 | atom    0 Er  f   | contribution = 87.3
+MO   564 | atom    0 Er  f   | contribution = 84.2
+MO   560 | atom    0 Er  f   | contribution = 59.1
+MO   562 | atom    0 Er  f   | contribution = 58.2
+
+Candidate indexes: [560, 562, 563, 564, 565, 566, 567]
+Current active-space indexes: [561, 562, 563, 564, 565, 566, 567]
+
+Suggested ORCA rotation block
+--------------------------------------------------------------------------------
+%scf
+rotate{ 561, 560, 90 } end
+end
