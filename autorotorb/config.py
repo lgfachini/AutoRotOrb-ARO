@@ -25,6 +25,16 @@ class OrbitalRequest:
     orbital_type: str
     number: int
 
+    def __post_init__(self) -> None:
+        if not str(self.atom_label).strip():
+            raise ValueError("atom_label must be non-empty.")
+        if not str(self.atom_symbol).strip():
+            raise ValueError("atom_symbol must be non-empty.")
+        if not str(self.orbital_type).strip():
+            raise ValueError("orbital_type must be non-empty.")
+        if self.number <= 0:
+            raise ValueError("number must be a positive integer.")
+
 
 @dataclass(frozen=True)
 class AnalysisConfig:
@@ -54,3 +64,27 @@ class AnalysisConfig:
     max_orbital_index: Optional[int] = None
     population_round_digits: int = 1
     rotation_angle: int = 90
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "output_file", Path(self.output_file))
+
+        requests = tuple(self.orbital_requests)
+        if not requests:
+            raise ValueError("orbital_requests must contain at least one OrbitalRequest.")
+        object.__setattr__(self, "orbital_requests", requests)
+
+        if self.active_electrons <= 0:
+            raise ValueError("active_electrons must be a positive integer.")
+
+        if self.population_round_digits < 0:
+            raise ValueError("population_round_digits must be zero or greater.")
+
+        if self.max_orbital_index is not None and self.max_orbital_index < 0:
+            raise ValueError("max_orbital_index must be zero or greater when set.")
+
+        if self.rotation_angle == 0:
+            raise ValueError("rotation_angle must be non-zero.")
+
+        from .parser import normalize_spin_label
+
+        normalize_spin_label(self.wanted_spin)

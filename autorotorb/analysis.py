@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from .config import AnalysisConfig
 from .io_utils import read_text_lines
 from .models import AnalysisResult
@@ -32,6 +34,13 @@ def analyze_active_space(config: AnalysisConfig) -> AnalysisResult:
         wanted_spin=config.wanted_spin,
     )
 
+    if not raw_populations:
+        warnings.warn(
+            "No Loewdin populations were parsed. Check the ORCA output file, "
+            "atom labels, and orbital_requests.",
+            stacklevel=2,
+        )
+
     ranked_populations = rank_populations(
         round_populations(raw_populations, config.population_round_digits)
     )
@@ -56,6 +65,15 @@ def analyze_active_space(config: AnalysisConfig) -> AnalysisResult:
             electron_space.active_space_end_index + 1,
         )
     )
+
+    if len(candidate_indexes) != len(active_space_indexes):
+        warnings.warn(
+            "Number of candidate orbitals "
+            f"({len(candidate_indexes)}) differs from the active-space size "
+            f"({len(active_space_indexes)}). Swaps may fail or leave the "
+            "active space misaligned.",
+            stacklevel=2,
+        )
 
     swaps = suggest_swaps(active_space_indexes, candidate_indexes)
     rotation_block = build_rotation_block(swaps, config.rotation_angle)

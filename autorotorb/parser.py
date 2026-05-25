@@ -11,6 +11,12 @@ LOEWDIN_HEADER = "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO"
 SPIN_UP = "SPIN UP"
 SPIN_DOWN = "SPIN DOWN"
 
+# ORCA prints six MO columns per row. The first data row uses MO indices 0–5,
+# the next row block 6–11, and so on. The dashed separator advances the base
+# index by six; the initial base is -6 so the first separator yields base 0.
+ORCA_COLUMNS_PER_ROW = 6
+ORCA_INITIAL_MO_OFFSET = -ORCA_COLUMNS_PER_ROW
+
 
 def normalize_spin_label(spin: Optional[str]) -> Optional[str]:
     """Normalize a spin label to ORCA's printed convention."""
@@ -50,6 +56,9 @@ def compute_electron_space(
     active_start  = inactive_last + 1
     active_end    = inactive_last + active_orbitals
     """
+    if active_orbitals <= 0:
+        raise ValueError("active_orbitals must be a positive integer.")
+
     inactive_electrons = total_electrons - active_electrons
 
     if inactive_electrons < 0:
@@ -87,7 +96,9 @@ def parse_orca_output(
     """
     Parse ORCA Loewdin reduced orbital populations per molecular orbital.
 
-    The parser accumulates contributions for the requested atom/orbital rows.
+    When the output contains multiple Loewdin tables, only the last table is
+    used. Contributions are accumulated across spin blocks when wanted_spin
+    is None.
     """
     wanted_spin = normalize_spin_label(wanted_spin)
     requests = tuple(orbital_requests)
@@ -95,14 +106,16 @@ def parse_orca_output(
 
     loewdin_section = False
     current_spin: Optional[str] = None
-    orbital_index_offset = -6
+    orbital_index_offset = ORCA_INITIAL_MO_OFFSET
     populations: OrbitalPopulationMap = {}
 
     for line in lines:
         if LOEWDIN_HEADER in line:
+            if loewdin_section:
+                populations.clear()
             loewdin_section = True
             current_spin = None
-            orbital_index_offset = -6
+            orbital_index_offset = ORCA_INITIAL_MO_OFFSET
             continue
 
         if not loewdin_section:
@@ -110,19 +123,19 @@ def parse_orca_output(
 
         if SPIN_UP in line:
             current_spin = SPIN_UP
-            orbital_index_offset = -6
+            orbital_index_offset = ORCA_INITIAL_MO_OFFSET
             continue
 
         if SPIN_DOWN in line:
             current_spin = SPIN_DOWN
-            orbital_index_offset = -6
+            orbital_index_offset = ORCA_INITIAL_MO_OFFSET
             continue
 
         if wanted_spin is not None and current_spin != wanted_spin:
             continue
 
         if " -------- " in line:
-            orbital_index_offset += 6
+            orbital_index_offset += ORCA_COLUMNS_PER_ROW
             continue
 
         for request in requests:

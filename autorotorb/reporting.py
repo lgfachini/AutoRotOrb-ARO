@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional, Tuple
 
-from .models import AnalysisResult
+from .models import AnalysisResult, OrbitalKey
+
+
+def sorted_candidate_items(
+    candidate_orbitals: dict[OrbitalKey, float],
+) -> Iterable[Tuple[OrbitalKey, float]]:
+    """Sort candidate orbitals by contribution (descending), then MO index."""
+    return sorted(
+        candidate_orbitals.items(),
+        key=lambda item: (-item[1], item[0][3]),
+    )
 
 
 def format_result(result: AnalysisResult) -> str:
@@ -31,7 +41,7 @@ def format_result(result: AnalysisResult) -> str:
     lines.append("-" * 80)
 
     if result.candidate_orbitals:
-        for key, value in result.candidate_orbitals.items():
+        for key, value in sorted_candidate_items(result.candidate_orbitals):
             atom_label, atom_symbol, orbital_type, mo_index = key
             lines.append(
                 f"MO {mo_index:5d} | atom {atom_label:>4s} {atom_symbol:<3s} "

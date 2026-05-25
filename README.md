@@ -14,7 +14,8 @@ It is especially useful when preparing or refining CASSCF/NEVPT2 active spaces, 
 * 🧮 **Infers inactive and active orbital ranges from NEL and active electron count**
 * 🔁 **Suggests ORCA `%scf rotate` commands**
 * 🧩 Supports multiple atom/orbital requests, such as metal `d` orbitals, lanthanide `f` orbitals, or mixed active spaces
-* 🚀 Everything can be executed through `main.py`
+* 🖥️ **Command-line interface** (`aro` or `python -m autorotorb.cli`)
+* 🧪 **Unit tests** with a minimal ORCA fixture for CI and local checks
 
 ---
 
@@ -22,9 +23,11 @@ It is especially useful when preparing or refining CASSCF/NEVPT2 active spaces, 
 
 ```text
 AutoRotOrb-ARO/
-├── main.py                    # Main user script; edit parameters here
+├── pyproject.toml              # Installable package metadata and CLI entry point
+├── main.py                     # Editable user script; edit parameters here
 ├── autorotorb/
 │   ├── __init__.py             # Package exports
+│   ├── cli.py                  # Command-line interface
 │   ├── config.py               # User-facing configuration dataclasses
 │   ├── models.py               # Internal result/data structures
 │   ├── io_utils.py             # File-reading utilities
@@ -33,6 +36,9 @@ AutoRotOrb-ARO/
 │   ├── rotation.py             # Orbital swap detection and rotate block creation
 │   ├── analysis.py             # Full active-space analysis pipeline
 │   └── reporting.py            # Text report generation
+├── tests/
+│   ├── fixtures/               # Minimal ORCA snippets for automated tests
+│   └── test_*.py
 ├── examples/
 │   └── basic_usage.py          # Minimal usage example
 └── data/                       # Place ORCA output files here
@@ -42,22 +48,28 @@ AutoRotOrb-ARO/
 
 ## ▶️ How to Use
 
-### 1. Install Requirements
+### 1. Requirements
 
-ARO currently uses only the Python standard library.
+ARO uses only the Python standard library. Python 3.9 or newer is recommended.
 
 ```bash
 python --version
 ```
 
-Python 3.9 or newer is recommended.
+### 2. Install (optional)
 
-### 2. Add Your ORCA Output File
+Install in editable mode to use the `aro` command from anywhere:
 
-Place your ORCA output file inside the `data/` folder. Example:
+```bash
+pip install -e .
+```
+
+### 3. Add Your ORCA Output File
+
+Place your ORCA output file inside the `data/` folder. A tiny example ship with the repository:
 
 ```text
-data/example.out
+data/minimal_orca.out
 ```
 
 The file must contain the ORCA section:
@@ -66,37 +78,47 @@ The file must contain the ORCA section:
 LOEWDIN REDUCED ORBITAL POPULATIONS PER MO
 ```
 
-### 3. Configure `main.py`
+### 4. Run via `main.py`
 
-```python
-config = AnalysisConfig(
-    output_file=Path("data/example.out"),
-    orbital_requests=[
-        OrbitalRequest(atom_label="0", atom_symbol="Dy", orbital_type="f", number=7),
-    ],
-    active_electrons=9,
-    wanted_spin="SPIN UP",
-)
-```
-
-Each `OrbitalRequest` defines an atom/shell contribution to track.
-
-### 4. Run
+Edit `main.py`, then:
 
 ```bash
 python main.py
 ```
 
-ARO prints the inferred active-space window, selected candidate molecular orbitals, current active-space orbital indices, and suggested ORCA `%scf rotate` commands.
+### 5. Run via CLI
+
+```bash
+python -m autorotorb.cli -i data/your_job.out --active-electrons 11 \
+    --orbital-request 0 Er f 7 --report data/aro_report.txt
+```
+
+After `pip install -e .`:
+
+```bash
+aro -i data/your_job.out --active-electrons 11 --orbital-request 0 Er f 7
+```
+
+Each `--orbital-request` uses four values: `LABEL SYMBOL TYPE COUNT`. Repeat the flag for mixed active spaces.
+
+Use `--spin none` to accumulate both spin blocks.
+
+### 6. Run Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ---
 
 ## 📌 Notes
 
 * Atom labels are taken from the ORCA Löwdin table, not necessarily from the XYZ file.
-* Molecular orbital indices follow the indices printed in the ORCA population blocks.
+* Molecular orbital indices follow the six-column layout in ORCA population tables.
+* If several Löwdin tables appear in one output file, **only the last table** is used.
 * `wanted_spin` can be `"SPIN UP"`, `"SPIN DOWN"`, or `None`.
 * The method assumes a closed inactive orbital space when inferring the active orbital window.
+* ARO raises an error if the number of orbitals to swap in and out of the active space does not match.
 * Always inspect the resulting orbitals after applying rotations.
 
 ---

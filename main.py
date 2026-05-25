@@ -17,44 +17,34 @@ from autorotorb.reporting import print_result, save_result
 # match the highest-ranked candidate orbitals.
 #
 # Atom labels must match the labels printed in the ORCA Loewdin table.
+#
+# You can also run from the command line:
+#   python -m autorotorb.cli -i data/your_job.out --active-electrons 11 \
+#       --orbital-request 0 Er f 7
 # =============================================================================
+
+DEFAULT_OUTPUT = Path("data/minimal_orca.out")
 
 
 def main() -> None:
     config = AnalysisConfig(
-        # ORCA output file to analyze.
-        output_file=Path("data/Er1Ti9.out"),
-
-        # Atom/orbital contributions to track.
+        output_file=DEFAULT_OUTPUT,
         orbital_requests=[
             OrbitalRequest(
                 atom_label="0",
-                atom_symbol="Er",
+                atom_symbol="Dy",
                 orbital_type="f",
-                number=7,
+                number=3,
             ),
         ],
-
-        # Number of active electrons in the intended active space.
-        active_electrons=11,
-
-        # Spin block to analyze: "SPIN UP", "SPIN DOWN", or None.
+        active_electrons=4,
         wanted_spin="SPIN UP",
-
-        # Optional upper index for candidate orbitals. None uses the active-space upper limit.
-        max_orbital_index=None,
-
-        # Decimal places used when ranking reported populations.
         population_round_digits=1,
-
-        # Rotation angle used in generated ORCA rotate commands.
         rotation_angle=90,
     )
 
     result = analyze_active_space(config)
     print_result(result)
-
-    # Optional text report.
     save_result(result, Path("data/aro_report.txt"))
 
 

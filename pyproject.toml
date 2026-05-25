@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autorotorb"
+version = "0.0.1"
+description = "Automatic orbital rotation helper for ORCA active spaces"
+readme = "README.md"
+license = { text = "GPL-3.0" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Lucas Gian Fachini", email = "lgfachini@ufpr.br" },
+]
+keywords = ["ORCA", "CASSCF", "active space", "computational chemistry"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[project.scripts]
+aro = "autorotorb.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["autorotorb*"]
+
+[tool.setuptools.package-data]
+autorotorb = []
