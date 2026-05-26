@@ -19,7 +19,7 @@ from autorotorb.reporting import print_result, save_result
 # Atom labels must match the labels printed in the ORCA Loewdin table.
 #
 # You can also run from the command line:
-#   python -m autorotorb.cli -i data/your_job.out --active-electrons 11 \
+#   python -m autorotorb -i data/your_job.out --active-electrons 11 \
 #       --orbital-request 0 Er f 7
 # =============================================================================
 
@@ -37,7 +37,7 @@ def main() -> None:
                 number=3,
             ),
         ],
-        active_electrons=4,
+        active_electrons=8,
         wanted_spin="SPIN UP",
         population_round_digits=1,
         rotation_angle=90,

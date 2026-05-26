@@ -6,7 +6,7 @@ from typing import Iterable, Optional
 from .config import OrbitalRequest
 from .models import ElectronSpace, OrbitalPopulationMap
 
-NEL_PATTERN = "Number of Electrons    NEL             ...."
+NEL_PATTERN = re.compile(r"Number\s+of\s+Electrons\s+NEL\s+\.*\s+(\d+)")
 LOEWDIN_HEADER = "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO"
 SPIN_UP = "SPIN UP"
 SPIN_DOWN = "SPIN DOWN"
@@ -37,8 +37,9 @@ def normalize_spin_label(spin: Optional[str]) -> Optional[str]:
 def parse_total_electrons(lines: Iterable[str]) -> int:
     """Extract the total number of electrons from an ORCA output file."""
     for line in lines:
-        if NEL_PATTERN in line:
-            return int(line.split()[-1])
+        match = NEL_PATTERN.search(line)
+        if match:
+            return int(match.group(1))
 
     raise ValueError("Could not find total number of electrons (NEL).")
 
@@ -106,6 +107,7 @@ def parse_orca_output(
 
     loewdin_section = False
     current_spin: Optional[str] = None
+    saw_spin_header = False
     orbital_index_offset = ORCA_INITIAL_MO_OFFSET
     populations: OrbitalPopulationMap = {}
 
@@ -123,15 +125,17 @@ def parse_orca_output(
 
         if SPIN_UP in line:
             current_spin = SPIN_UP
+            saw_spin_header = True
             orbital_index_offset = ORCA_INITIAL_MO_OFFSET
             continue
 
         if SPIN_DOWN in line:
             current_spin = SPIN_DOWN
+            saw_spin_header = True
             orbital_index_offset = ORCA_INITIAL_MO_OFFSET
             continue
 
-        if wanted_spin is not None and current_spin != wanted_spin:
+        if wanted_spin is not None and saw_spin_header and current_spin != wanted_spin:
             continue
 
         if " -------- " in line:

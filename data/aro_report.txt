@@ -1,0 +1,21 @@
+AutoRotOrb (ARO) active-space analysis
+================================================================================
+
+Electron-space summary
+--------------------------------------------------------------------------------
+Total electrons: 20
+Last inactive orbital index: 5
+Active-space index range: 6 - 8
+
+Candidate orbitals
+--------------------------------------------------------------------------------
+MO     8 | atom    0 Dy  f   | contribution = 90.0
+MO     7 | atom    0 Dy  f   | contribution = 80.0
+MO     6 | atom    0 Dy  f   | contribution = 70.0
+
+Candidate indexes: [6, 7, 8]
+Current active-space indexes: [6, 7, 8]
+
+Suggested ORCA rotation block
+--------------------------------------------------------------------------------
+# The active space does not need further rotations.
