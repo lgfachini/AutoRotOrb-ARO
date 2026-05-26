@@ -1,37 +1,47 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "autorotorb"
 version = "0.0.1"
-description = "Automatic orbital rotation helper for ORCA active spaces"
+description = "Automatic orbital rotation helper for ORCA active-space calculations."
 readme = "README.md"
-license = { text = "GPL-3.0" }
 requires-python = ">=3.9"
+license = { text = "GPL-3.0-or-later" }
 authors = [
-    { name = "Lucas Gian Fachini", email = "lgfachini@ufpr.br" },
+  { name = "Lucas Gian Fachini" }
 ]
-keywords = ["ORCA", "CASSCF", "active space", "computational chemistry"]
+keywords = [
+  "orca",
+  "casscf",
+  "nevpt2",
+  "active-space",
+  "quantum-chemistry",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Topic :: Scientific/Engineering :: Chemistry",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = []
 
-[project.optional-dependencies]
-dev = []
+[project.urls]
+Repository = "https://github.com/lgfachini/AutoRotOrb-ARO"
 
 [project.scripts]
 aro = "autorotorb.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["autorotorb*"]
 
-[tool.setuptools.package-data]
-autorotorb = []
+[tool.setuptools.package-dir]
+"" = "src"

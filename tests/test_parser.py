@@ -1,73 +1,90 @@
 from __future__ import annotations
 
 import unittest
-from pathlib import Path
 
 from autorotorb.config import OrbitalRequest
 from autorotorb.parser import (
-    ORCA_COLUMNS_PER_ROW,
-    ORCA_INITIAL_MO_OFFSET,
     compute_electron_space,
+    normalize_spin_label,
     parse_orca_output,
     parse_total_electrons,
 )
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
-REQUEST = OrbitalRequest(atom_label="0", atom_symbol="Dy", orbital_type="f", number=3)
 
+class ParserTests(unittest.TestCase):
+    def test_parse_total_electrons_accepts_variable_spacing(self) -> None:
+        lines = ["Number   of   Electrons   NEL   ....      20\n"]
 
-class TestParseTotalElectrons(unittest.TestCase):
-    def test_reads_nel_from_fixture(self) -> None:
-        lines = (FIXTURES / "minimal_orca.out").read_text(encoding="utf-8").splitlines(
-            keepends=True
-        )
         self.assertEqual(parse_total_electrons(lines), 20)
 
-
-class TestComputeElectronSpace(unittest.TestCase):
-    def test_active_window(self) -> None:
+    def test_compute_electron_space_uses_zero_based_orbital_indexes(self) -> None:
         space = compute_electron_space(
             total_electrons=20,
-            active_electrons=4,
+            active_electrons=8,
             active_orbitals=3,
         )
-        self.assertEqual(space.inactive_orbitals_last_index, 7)
-        self.assertEqual(space.active_space_start_index, 8)
-        self.assertEqual(space.active_space_end_index, 10)
 
-    def test_rejects_odd_inactive_electron_count(self) -> None:
-        with self.assertRaises(ValueError):
+        self.assertEqual(space.inactive_orbitals_last_index, 5)
+        self.assertEqual(space.active_space_start_index, 6)
+        self.assertEqual(space.active_space_end_index, 8)
+
+    def test_compute_electron_space_rejects_odd_inactive_electron_count(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must be even"):
             compute_electron_space(
-                total_electrons=21,
-                active_electrons=4,
+                total_electrons=20,
+                active_electrons=7,
                 active_orbitals=3,
             )
 
+    def test_normalize_spin_label_accepts_aliases(self) -> None:
+        self.assertEqual(normalize_spin_label("alpha"), "SPIN UP")
+        self.assertEqual(normalize_spin_label("beta"), "SPIN DOWN")
+        self.assertIsNone(normalize_spin_label(None))
 
-class TestParseOrcaOutput(unittest.TestCase):
-    def test_maps_mo_indices_from_orca_columns(self) -> None:
+    def test_parse_orca_output_reads_requested_spin_block(self) -> None:
+        request = OrbitalRequest("0", "Dy", "f", 2)
         lines = [
             "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO\n",
             "SPIN UP\n",
             " -------- -------- -------- -------- -------- --------\n",
-            "         0    Dy    f       0.0    0.0    0.0    0.0    0.0    0.0\n",
+            "     0 Dy f 1.0 2.0 3.0 4.0 5.0 6.0\n",
+            "SPIN DOWN\n",
             " -------- -------- -------- -------- -------- --------\n",
-            "         0    Dy    f       0.0    0.0    5.5    0.0    0.0    0.0\n",
+            "     0 Dy f 10.0 20.0 30.0 40.0 50.0 60.0\n",
         ]
-        populations = parse_orca_output(lines, [REQUEST], wanted_spin="SPIN UP")
-        self.assertEqual(populations[("0", "Dy", "f", 8)], 5.5)
 
-    def test_uses_last_loewdin_block_only(self) -> None:
-        lines = (FIXTURES / "multi_loewdin_orca.out").read_text(
-            encoding="utf-8"
-        ).splitlines(keepends=True)
-        populations = parse_orca_output(lines, [REQUEST], wanted_spin="SPIN UP")
-        self.assertEqual(populations[("0", "Dy", "f", 8)], 1.0)
-        self.assertEqual(populations.get(("0", "Dy", "f", 6), 0.0), 0.0)
+        populations = parse_orca_output(lines, [request], wanted_spin="SPIN DOWN")
 
-    def test_orca_index_constants(self) -> None:
-        self.assertEqual(ORCA_INITIAL_MO_OFFSET, -6)
-        self.assertEqual(ORCA_COLUMNS_PER_ROW, 6)
+        self.assertEqual(populations[("0", "Dy", "f", 0)], 10.0)
+        self.assertEqual(populations[("0", "Dy", "f", 5)], 60.0)
+
+    def test_parse_orca_output_reads_restricted_table_without_spin_header(self) -> None:
+        request = OrbitalRequest("0", "Dy", "f", 2)
+        lines = [
+            "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO\n",
+            " -------- -------- -------- -------- -------- --------\n",
+            "     0 Dy f 1.0 2.0 3.0 4.0 5.0 6.0\n",
+        ]
+
+        populations = parse_orca_output(lines, [request], wanted_spin="SPIN UP")
+
+        self.assertEqual(populations[("0", "Dy", "f", 0)], 1.0)
+        self.assertEqual(populations[("0", "Dy", "f", 5)], 6.0)
+
+    def test_parse_orca_output_uses_last_loewdin_table(self) -> None:
+        request = OrbitalRequest("0", "Dy", "f", 2)
+        lines = [
+            "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO\n",
+            " -------- -------- -------- -------- -------- --------\n",
+            "     0 Dy f 1.0 2.0 3.0 4.0 5.0 6.0\n",
+            "LOEWDIN REDUCED ORBITAL POPULATIONS PER MO\n",
+            " -------- -------- -------- -------- -------- --------\n",
+            "     0 Dy f 10.0 20.0 30.0 40.0 50.0 60.0\n",
+        ]
+
+        populations = parse_orca_output(lines, [request], wanted_spin=None)
+
+        self.assertEqual(populations[("0", "Dy", "f", 0)], 10.0)
 
 
 if __name__ == "__main__":

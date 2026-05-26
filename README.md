@@ -14,8 +14,7 @@ It is especially useful when preparing or refining CASSCF/NEVPT2 active spaces, 
 * 🧮 **Infers inactive and active orbital ranges from NEL and active electron count**
 * 🔁 **Suggests ORCA `%scf rotate` commands**
 * 🧩 Supports multiple atom/orbital requests, such as metal `d` orbitals, lanthanide `f` orbitals, or mixed active spaces
-* 🖥️ **Command-line interface** (`aro` or `python -m autorotorb.cli`)
-* 🧪 **Unit tests** with a minimal ORCA fixture for CI and local checks
+* 🖥️ Can be executed through `main.py`, `python -m autorotorb`, or the `aro` command after installation
 
 ---
 
@@ -23,24 +22,27 @@ It is especially useful when preparing or refining CASSCF/NEVPT2 active spaces, 
 
 ```text
 AutoRotOrb-ARO/
-├── pyproject.toml              # Installable package metadata and CLI entry point
-├── main.py                     # Editable user script; edit parameters here
-├── autorotorb/
-│   ├── __init__.py             # Package exports
-│   ├── cli.py                  # Command-line interface
-│   ├── config.py               # User-facing configuration dataclasses
-│   ├── models.py               # Internal result/data structures
-│   ├── io_utils.py             # File-reading utilities
-│   ├── parser.py               # ORCA Löwdin population parser
-│   ├── selection.py            # Orbital ranking and candidate selection
-│   ├── rotation.py             # Orbital swap detection and rotate block creation
-│   ├── analysis.py             # Full active-space analysis pipeline
-│   └── reporting.py            # Text report generation
-├── tests/
-│   ├── fixtures/               # Minimal ORCA snippets for automated tests
-│   └── test_*.py
+├── main.py                    # Main runner script
+├── config/
+│   ├── __init__.py
+│   └── config.py              # User settings for main.py
+├── pyproject.toml             # Package metadata and CLI entry point
+├── src/
+│   └── autorotorb/
+│       ├── __init__.py         # Package exports
+│       ├── __main__.py         # Enables python -m autorotorb
+│       ├── cli.py              # Command-line interface
+│       ├── config.py           # User-facing configuration dataclasses
+│       ├── models.py           # Internal result/data structures
+│       ├── io_utils.py         # File-reading utilities
+│       ├── parser.py           # ORCA Löwdin population parser
+│       ├── selection.py        # Orbital ranking and candidate selection
+│       ├── rotation.py         # Orbital swap detection and rotate block creation
+│       ├── analysis.py         # Full active-space analysis pipeline
+│       └── reporting.py        # Text report generation
 ├── examples/
 │   └── basic_usage.py          # Minimal usage example
+├── tests/                      # Unit tests and fixtures
 └── data/                       # Place ORCA output files here
 ```
 
@@ -48,28 +50,28 @@ AutoRotOrb-ARO/
 
 ## ▶️ How to Use
 
-### 1. Requirements
+### 1. Install Requirements
 
-ARO uses only the Python standard library. Python 3.9 or newer is recommended.
+ARO currently uses only the Python standard library.
 
 ```bash
 python --version
 ```
 
-### 2. Install (optional)
+Python 3.9 or newer is recommended.
 
-Install in editable mode to use the `aro` command from anywhere:
+For editable local installation:
 
 ```bash
-pip install -e .
+python -m pip install -e .
 ```
 
-### 3. Add Your ORCA Output File
+### 2. Add Your ORCA Output File
 
-Place your ORCA output file inside the `data/` folder. A tiny example ship with the repository:
+Place your ORCA output file inside the `data/` folder. Example:
 
 ```text
-data/minimal_orca.out
+data/example.out
 ```
 
 The file must contain the ORCA section:
@@ -78,35 +80,51 @@ The file must contain the ORCA section:
 LOEWDIN REDUCED ORBITAL POPULATIONS PER MO
 ```
 
-### 4. Run via `main.py`
+### 3. Configure `config/config.py`
 
-Edit `main.py`, then:
+```python
+ANALYSIS_CONFIG = AnalysisConfig(
+    output_file=Path("data/example.out"),
+    orbital_requests=[
+        OrbitalRequest(atom_label="0", atom_symbol="Dy", orbital_type="f", number=7),
+    ],
+    active_electrons=9,
+    wanted_spin="SPIN UP",
+)
+```
+
+Each `OrbitalRequest` defines an atom/shell contribution to track.
+
+### 4. Run
 
 ```bash
 python main.py
 ```
 
-### 5. Run via CLI
+ARO prints the inferred active-space window, selected candidate molecular orbitals, current active-space orbital indices, and suggested ORCA `%scf rotate` commands.
+
+You can also run the command-line interface:
 
 ```bash
-python -m autorotorb.cli -i data/your_job.out --active-electrons 11 \
-    --orbital-request 0 Er f 7 --report data/aro_report.txt
+python -m pip install -e .
+python -m autorotorb --input data/example.out --active-electrons 9 --orbital-request 0 Dy f 7 --spin "SPIN UP"
 ```
 
-After `pip install -e .`:
+After editable installation, the same command is available as:
 
 ```bash
-aro -i data/your_job.out --active-electrons 11 --orbital-request 0 Er f 7
+aro --input data/example.out --active-electrons 9 --orbital-request 0 Dy f 7 --spin "SPIN UP"
 ```
 
-Each `--orbital-request` uses four values: `LABEL SYMBOL TYPE COUNT`. Repeat the flag for mixed active spaces.
+---
 
-Use `--spin none` to accumulate both spin blocks.
+## 🧪 Tests
 
-### 6. Run Tests
+Run the unit tests with:
 
 ```bash
-python -m unittest discover -s tests -v
+python -m pip install -e .
+python -m unittest discover
 ```
 
 ---
@@ -114,11 +132,9 @@ python -m unittest discover -s tests -v
 ## 📌 Notes
 
 * Atom labels are taken from the ORCA Löwdin table, not necessarily from the XYZ file.
-* Molecular orbital indices follow the six-column layout in ORCA population tables.
-* If several Löwdin tables appear in one output file, **only the last table** is used.
+* Molecular orbital indices follow the indices printed in the ORCA population blocks.
 * `wanted_spin` can be `"SPIN UP"`, `"SPIN DOWN"`, or `None`.
 * The method assumes a closed inactive orbital space when inferring the active orbital window.
-* ARO raises an error if the number of orbitals to swap in and out of the active space does not match.
 * Always inspect the resulting orbitals after applying rotations.
 
 ---

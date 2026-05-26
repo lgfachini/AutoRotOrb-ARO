@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--active-electrons",
         required=True,
-        type=int,
+        type=positive_int,
         help="Number of active electrons in the intended active space.",
     )
     parser.add_argument(
@@ -49,19 +49,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--max-orbital-index",
-        type=int,
+        type=non_negative_int,
         default=None,
         help="Upper MO index for candidates (default: active-space end).",
     )
     parser.add_argument(
         "--round-digits",
-        type=int,
+        type=non_negative_int,
         default=1,
         help="Decimal places when ranking populations.",
     )
     parser.add_argument(
         "--rotation-angle",
-        type=int,
+        type=non_zero_int,
         default=90,
         help="Rotation angle for generated ORCA rotate commands.",
     )
@@ -86,6 +86,42 @@ def parse_spin_argument(spin: str) -> Optional[str]:
     return spin
 
 
+def positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer.") from exc
+
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("value must be a positive integer.")
+
+    return parsed
+
+
+def non_negative_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer.") from exc
+
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("value must be zero or greater.")
+
+    return parsed
+
+
+def non_zero_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer.") from exc
+
+    if parsed == 0:
+        raise argparse.ArgumentTypeError("value must be non-zero.")
+
+    return parsed
+
+
 def orbital_requests_from_args(
     raw_requests: List[List[str]],
 ) -> List[OrbitalRequest]:
@@ -96,7 +132,7 @@ def orbital_requests_from_args(
                 atom_label=label,
                 atom_symbol=symbol,
                 orbital_type=orbital_type,
-                number=int(count),
+                number=positive_int(count),
             )
         )
     return requests
@@ -116,11 +152,14 @@ def config_from_args(args: argparse.Namespace) -> AnalysisConfig:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
-    config = config_from_args(args)
-    result = analyze_active_space(config)
-    print_result(result)
-    save_result(result, args.report)
+    try:
+        args = parser.parse_args(argv)
+        config = config_from_args(args)
+        result = analyze_active_space(config)
+        print_result(result)
+        save_result(result, args.report)
+    except (OSError, ValueError) as exc:
+        parser.exit(2, f"{parser.prog}: error: {exc}\n")
     return 0
 
 
